@@ -1,6 +1,44 @@
+SHEET_NAME   = "Catalog"
 START_COLUMN = 4;
 START_ROW    = 1;
 COLUMNS      = 4;
+
+function activeSheet() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (sheet == null) {
+    sheet =  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1").setName(SHEET_NAME);
+  }
+  return sheet;
+}
+
+function generateControls() {
+  if (getCategoryMetadata(name) != null) {
+    alert("Категория уже существует!");
+    return;
+  }
+  var sheet = activeSheet();
+
+  sheet.setColumnWidth(1, 30).setColumnWidth(2, 130).setColumnWidth(3, 30);
+
+  var addImage = sheet.insertImage(getAddButtonImageUrl(), 2, 2, 4, 2);
+  var rmImage = sheet.insertImage(getRemoveButtonImageUrl(), 2, 4, 4, 2);
+  var editImage = sheet.insertImage(getEditButtonImageUrl(), 2, 6, 4, 2);
+
+  ["B2:B3", "B4:B5", "B6:B7"].forEach(
+    a1 => sheet.getRange(a1).mergeVertically().setBorder(true, true, true, true, false, false, "#666666", SpreadsheetApp.BorderStyle.SOLID_MEDIUM)
+  );
+
+  addImage.assignScript("openAddDialog");
+  rmImage.assignScript("openRemoveDialog");
+  editImage.assignScript("openEditDialog");
+
+  setProtectedRanges();
+}
+
+function setProtectedRanges() {
+  activeSheet().getRange('A:C').protect().setDescription('Controls').setWarningOnly(true);
+  activeSheet().getRange('1:2').protect().setDescription('Controls').setWarningOnly(true);
+}
 
 function openAddDialog() {
   var html = HtmlService.createTemplateFromFile('add').evaluate().setWidth(400).setHeight(220);
@@ -13,33 +51,14 @@ function openRemoveDialog() {
 }
 
 function openEditDialog() {
-  var html = HtmlService.createTemplateFromFile('edit').evaluate().setWidth(400).setHeight(220);
+  var html = HtmlService.createTemplateFromFile('edit').evaluate().setWidth(400).setHeight(270);
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
 
-function activeSheet() {
-  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName("catalog");
-}
 
 function extractA1Columns(notation) {
   return notation.split(':').map(s => s.match(/^[A-Z]+/)[0]).join(':')
 }
-
-function test() {
-  addCategory("test");
-  // var sheet = activeSheet();
-
-  // range = sheet.getRange(2).getA1Notation();
-  // Logger.log(sheet.getRange(2).getA1Notation())
-  // Logger.log(extractA1Columns(range.getA1Notation()));
-
-  // range.setBorder(null, null, null, null, false, false, '#666666', SpreadsheetApp.BorderStyle.SOLID);
-}
-
-// function setHeaderMetadata() {
-//   var range = activeSheet().getRange('1:1');
-//   range.addDeveloperMetadata('header');
-// }
 
 function addCategory(name) {
   var sheet       = activeSheet();
@@ -71,29 +90,34 @@ function addCategory(name) {
     .setBorder(null, null, true, null, null, null, '#666666', SpreadsheetApp.BorderStyle.SOLID)
     .setValues([['Артикул', 'Наименование', 'Ед. изм.', 'Изображение']]);
 
-    dataRange
+  dataRange
     .setBorder(null, null, null, null, true, null, '#666666', SpreadsheetApp.BorderStyle.SOLID)
     .setBorder(null, true, null, true, null, null, '#666666', SpreadsheetApp.BorderStyle.SOLID_MEDIUM)
     .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
 
-
-  var fc = dataRangeNotation.split(':')[0]
-  var firstColumnRange = sheet.getRange(`${fc}:${fc}`);
-
-  firstColumnRange.addDeveloperMetadata('category', name);
+  var firstColumn = dataRangeNotation.split(':')[0];
+  sheet.getRange(`${firstColumn}:${firstColumn}`).addDeveloperMetadata('category', name);
 }
 
 function removeCategory(name) {
-  var sheet       = activeSheet();
-  var metadata    = sheet.createDeveloperMetadataFinder().withKey('category').withValue(name).find()[0];
-  var firstColumn = metadata.getLocation().getColumn().getColumn();
-
-  sheet.deleteColumns(firstColumn, COLUMNS);
+  var metadata = getCategoryMetadata(name);
+  activeSheet().deleteColumns(metadata.getLocation().getColumn().getColumn(), COLUMNS);
   metadata.remove();
+}
+
+function editCategory(name, newName) {
+  var metadata = getCategoryMetadata(name);
+  activeSheet().getRange(START_ROW, metadata.getLocation().getColumn().getColumn(), 1, COLUMNS).setValue(newName);
+
+  metadata.setValue(newName);
 }
 
 function getCategoriesMetadata() {
   return activeSheet().createDeveloperMetadataFinder().withKey('category').find();
+}
+
+function getCategoryMetadata(name) {
+  return activeSheet().createDeveloperMetadataFinder().withKey('category').withValue(name).find()[0];
 }
 
 function nextCategoryLocation() {
@@ -110,10 +134,6 @@ function categoriesList() {
   var categories = [];
   getCategoriesMetadata().forEach(m => categories.push(m.getValue()));
   return categories;
-}
-
-function getMetadata(range) {
-  var metadata = range.createDeveloperMetadataFinder().find();
 }
 
 function getAllMetadata(key = null) {
