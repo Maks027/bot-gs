@@ -12,10 +12,6 @@ function activeSheet() {
 }
 
 function generateControls() {
-  if (getCategoryMetadata(name) != null) {
-    alert("Категория уже существует!");
-    return;
-  }
   var sheet = activeSheet();
 
   sheet.setColumnWidth(1, 30).setColumnWidth(2, 130).setColumnWidth(3, 30);
