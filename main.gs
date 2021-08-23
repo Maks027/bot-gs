@@ -80,8 +80,7 @@ function addCategory(name) {
     .setFontSize(14)
     .setFontStyle('bold')
     .setBorder(true, true, true, true, null, null, '#666666', SpreadsheetApp.BorderStyle.SOLID_MEDIUM)
-    .setValue(name)
-    .activate();
+    .setValue(name);
 
   secondHeaderRange
     .setFontFamily('Times New Roman')
@@ -94,6 +93,8 @@ function addCategory(name) {
     .setBorder(null, null, null, null, true, null, '#666666', SpreadsheetApp.BorderStyle.SOLID)
     .setBorder(null, true, null, true, null, null, '#666666', SpreadsheetApp.BorderStyle.SOLID_MEDIUM)
     .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+
+  sheet.getRange(2, dataRange.getLastColumn(), 1, 1).activate();
 
   var firstColumn = dataRangeNotation.split(':')[0];
   sheet.getRange(`${firstColumn}:${firstColumn}`).addDeveloperMetadata('category', name);
